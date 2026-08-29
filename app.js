@@ -1,6 +1,10 @@
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";import{getAuth,GoogleAuthProvider,signInWithPopup,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";import{getFirestore,collection,addDoc,doc,updateDoc,onSnapshot,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";import{firebaseConfig}from"./firebase-config.js";import{Q}from"./quiz-bank.js";
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";import{getAuth,GoogleAuthProvider,signInWithPopup,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";import{getFirestore,collection,addDoc,doc,updateDoc,onSnapshot,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";import{firebaseConfig}from"./firebase-config.js";import{Q}from"./quiz-bank.js";import{K11}from"./chem11-foundation.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),provider=new GoogleAuthProvider(),$=x=>document.getElementById(x),days=[0,1,3,7,14];let user,cards=[],unsub,queue=[],cur,quiz=[],qi=0,score=0,answered=false;
-const K=[['pH','Dung dịch','pH = −log[H⁺]. pH<7 axit, =7 trung tính, >7 bazơ.','[H⁺] tăng → pH giảm.','Đừng nhầm pH với nồng độ của toàn bộ chất.'],['Chất điện li','Nền tảng','Chất khi tan trong nước tạo ion và dung dịch dẫn điện.','Axit, bazơ và đa số muối là chất điện li.','Điện li mạnh phân li gần như hoàn toàn.'],['Oxi hóa – khử','Đại cương','Oxi hóa là nhường electron; khử là nhận electron.','Số oxi hóa tăng → bị oxi hóa.','Chất khử nhường e; chất oxi hóa nhận e.'],['Al(OH)₃','Vô cơ','Al(OH)₃ là chất lưỡng tính, phản ứng với axit và bazơ mạnh.','Nhớ: lưỡng tính.','Với bazơ tạo aluminat trong điều kiện thích hợp.'],['NaHCO₃','Vô cơ','Natri hiđrocacbonat là muối axit; gặp axit giải phóng CO₂.','NaHCO₃ + HCl → CO₂.','Trong bài trộn, xét lượng H⁺ trước.'],['NH₄Cl','Vô cơ','NH₄Cl là muối chứa NH₄⁺; dung dịch thường có môi trường axit.','NH₄⁺ thủy phân tạo H₃O⁺.','NH₄⁺ là axit liên hợp của NH₃.'],['Este','Hữu cơ','Este có dạng RCOOR\'; thường tạo từ axit cacboxylic và ancol.','Thủy phân bazơ → muối + ancol.','Xà phòng hóa là thủy phân este trong môi trường bazơ.'],['Amin','Hữu cơ','Amin là dẫn xuất của NH₃ khi thay H bằng gốc hydrocarbon.','Amin có tính bazơ do cặp e tự do trên N.','Anilin là amin thơm, bazơ yếu hơn amin no.'],['Amino acid','Hữu cơ','Amino acid chứa đồng thời –NH₂ và –COOH.','Có tính lưỡng tính.','Peptide hình thành qua liên kết peptide.'],['CO₃²⁻','Vô cơ','Carbonate gặp H⁺ có thể giải phóng CO₂.','CO₃²⁻ + 2H⁺ → CO₂ + H₂O.','Rất hay gặp trong bài tính lượng axit.']];
+const KBASE=[['pH','Dung dịch','pH = −log[H⁺]. pH<7 axit, =7 trung tính, >7 bazơ.','[H⁺] tăng → pH giảm.','Đừng nhầm pH với nồng độ của toàn bộ chất.'],['Chất điện li','Nền tảng','Chất khi tan trong nước tạo ion và dung dịch dẫn điện.','Axit, bazơ và đa số muối là chất điện li.','Điện li mạnh phân li gần như hoàn toàn.'],['Oxi hóa – khử','Đại cương','Oxi hóa là nhường electron; khử là nhận electron.','Số oxi hóa tăng → bị oxi hóa.','Chất khử nhường e; chất oxi hóa nhận e.'],['Al(OH)₃','Vô cơ','Al(OH)₃ là chất lưỡng tính, phản ứng với axit và bazơ mạnh.','Nhớ: lưỡng tính.','Với bazơ tạo aluminat trong điều kiện thích hợp.'],['NaHCO₃','Vô cơ','Natri hiđrocacbonat là muối axit; gặp axit giải phóng CO₂.','NaHCO₃ + HCl → CO₂.','Trong bài trộn, xét lượng H⁺ trước.'],['NH₄Cl','Vô cơ','NH₄Cl là muối chứa NH₄⁺; dung dịch thường có môi trường axit.','NH₄⁺ thủy phân tạo H₃O⁺.','NH₄⁺ là axit liên hợp của NH₃.'],['Este','Hữu cơ','Este có dạng RCOOR\'; thường tạo từ axit cacboxylic và ancol.','Thủy phân bazơ → muối + ancol.','Xà phòng hóa là thủy phân este trong môi trường bazơ.'],['Amin','Hữu cơ','Amin là dẫn xuất của NH₃ khi thay H bằng gốc hydrocarbon.','Amin có tính bazơ do cặp e tự do trên N.','Anilin là amin thơm, bazơ yếu hơn amin no.'],['Amino acid','Hữu cơ','Amino acid chứa đồng thời –NH₂ và –COOH.','Có tính lưỡng tính.','Peptide hình thành qua liên kết peptide.'],['CO₃²⁻','Vô cơ','Carbonate gặp H⁺ có thể giải phóng CO₂.','CO₃²⁻ + 2H⁺ → CO₂ + H₂O.','Rất hay gặp trong bài tính lượng axit.']];
+const K=[...KBASE,...K11];
+const K11Q=K11.map((x,i)=>({id:`k11-${i+1}`,grade:'11',tag:'NỀN TẢNG HÓA 11',topic:x[1],prompt:`Nhận định nào đúng nhất về “${x[0]}”?`,formula:'',options:[x[2],K11[(i+7)%K11.length][2],K11[(i+19)%K11.length][2],K11[(i+31)%K11.length][2]],answer:0,explain:`${x[3]} ${x[4]}`}));
+const LTQ=[...K11Q,...Q];
+
 const R=[['NaHCO₃ + HCl','NaHCO₃ + HCl → NaCl + CO₂↑ + H₂O','Muối bicarbonate gặp axit giải phóng CO₂.'],['CO₃²⁻ + H⁺','CO₃²⁻ + 2H⁺ → CO₂↑ + H₂O','Phương trình ion rút gọn quan trọng.'],['NH₄⁺ + OH⁻','NH₄⁺ + OH⁻ → NH₃↑ + H₂O','Phản ứng đặc trưng dùng nhận biết NH₄⁺.'],['Al(OH)₃ + HCl','Al(OH)₃ + 3HCl → AlCl₃ + 3H₂O','Al(OH)₃ phản ứng với axit.'],['Al(OH)₃ + NaOH','Al(OH)₃ + NaOH → Na[Al(OH)₄]','Ví dụ về tính lưỡng tính.'],['CH₃COOH + C₂H₅OH','CH₃COOH + C₂H₅OH ⇌ CH₃COOC₂H₅ + H₂O','Este hóa, xúc tác H₂SO₄ đặc, đun nóng.'],['Este + NaOH','RCOOR\' + NaOH → RCOONa + R\'OH','Xà phòng hóa este đơn chức.'],['Ag⁺ + Cl⁻','Ag⁺ + Cl⁻ → AgCl↓','AgCl là kết tủa trắng.']];
 const F=[['Mol','n = m / M','n: mol; m: g; M: g/mol.'],['Dung dịch','C = n / V','V tính bằng L; C đơn vị mol/L.'],['Phần trăm','C% = m chất tan / m dung dịch × 100%','Khối lượng phải cùng đơn vị.'],['pH','pH = −log[H⁺]','pH và [H⁺] biến thiên ngược chiều.'],['Hiệu suất','H% = thực tế / lý thuyết × 100%','Kiểm tra lượng thực tế và lý thuyết.'],['Khí','PV = nRT','Dùng khi cần xét điều kiện khí cụ thể.'],['Trung hòa','n(H⁺) = n(OH⁻)','Sau khi quy đổi đúng hệ số phản ứng.']];
 function page(id){document.querySelectorAll('.page').forEach(x=>x.classList.add('d-none'));$(id)?.classList.remove('d-none');document.querySelectorAll('.nav-link').forEach(x=>x.classList.toggle('active',x.dataset.page===id));if(id==='home')dashboard();if(id==='study')studyBuild()};document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>page(b.dataset.page));
@@ -107,3 +111,78 @@ $('start').onclick=()=>startQuiz('smart');
 $('retryQuiz').onclick=()=>startQuiz('retry');
 $('next').onclick=()=>{if(!answered)return;if(qi<quiz.length-1){qi++;quizRender()}else finishQuiz()};
 knowledgeRender();dashboard();refreshQuizStats();
+/* ================= HỌC & TEST — AZOTA STYLE ================= */
+let ltQuiz=[],ltIndex=0,ltAnswers={},ltFlags=new Set(),ltSubmitted=false;
+const LT_WRONG_KEY='learn_wrong';
+function ltWrongIds(){return readJSON(storageKey(LT_WRONG_KEY),[])}
+function ltSaveWrong(ids){writeJSON(storageKey(LT_WRONG_KEY),[...new Set(ids)].slice(0,2000));ltRefreshWrongCount()}
+function ltRefreshWrongCount(){const n=ltWrongIds().length;['ltWrongCount','ltRetryStart'].forEach(id=>{if($(id))$(id).textContent=n});}
+function ltInit(){
+  const topics=[...new Set(K11.map(x=>x[1]))];
+  $('ltTopic').innerHTML='<option value="all">Tất cả chủ đề</option>'+topics.map(t=>`<option value="${t}">${t}</option>`).join('');
+  $('ltTopic').onchange=ltRenderRead;$('ltSearch').oninput=ltRenderRead;
+  document.querySelectorAll('[data-lt-mode]').forEach(b=>b.onclick=()=>ltMode(b.dataset.ltMode));
+  $('ltStartBtn').onclick=()=>ltStart('smart');$('ltRetryBtn').onclick=()=>ltStart('wrong');$('ltWrongTest').onclick=()=>ltStart('wrong');$('ltAgain').onclick=()=>ltStart('smart');
+  $('ltPrev').onclick=()=>{if(ltIndex>0){ltIndex--;ltRenderQuestion()}};
+  $('ltNext').onclick=()=>{if(ltIndex<ltQuiz.length-1){ltIndex++;ltRenderQuestion()}else ltSubmitExam()};
+  $('ltFlag').onclick=()=>{if(ltFlags.has(ltIndex))ltFlags.delete(ltIndex);else ltFlags.add(ltIndex);ltRenderQuestion()};
+  $('ltSubmit').onclick=()=>ltSubmitExam();
+  ltRenderRead();ltRenderWrong();ltRefreshWrongCount();
+}
+function ltMode(mode){
+  document.querySelectorAll('.lt-tab').forEach(b=>b.classList.toggle('active',b.dataset.ltMode===mode));
+  $('ltRead').classList.toggle('d-none',mode!=='read');$('ltTest').classList.toggle('d-none',mode!=='test');$('ltWrong').classList.toggle('d-none',mode!=='wrong');
+  $('ltModeBadge').textContent=mode==='read'?'Đọc':mode==='test'?'Test':'Câu sai';
+  if(mode==='wrong')ltRenderWrong();
+}
+function ltRenderRead(){
+  const q=($('ltSearch')?.value||'').toLowerCase(),t=$('ltTopic')?.value||'all';
+  const list=K.map((x,i)=>({x,i})).filter(o=>(t==='all'||o.x[1]===t)&&o.x.join(' ').toLowerCase().includes(q));
+  $('ltCards').innerHTML=list.length?list.map(({x,i})=>`<div class="col-md-6 col-xl-4"><article class="lt-card"><span class="tag">${x[1]}</span><h4>${x[0]}</h4><p>${x[2]}</p><div class="lt-memory">⚡ ${x[3]}</div><p class="lt-tip mb-3">💡 ${x[4]}</p><div class="d-flex justify-content-between align-items-center"><span class="lt-stat"><i class="bi bi-check2-circle"></i>Đọc kỹ → tự nói lại</span><button class="btn btn-sm btn-outline-primary add" data-i="${i}">${cards.some(c=>c.title===x[0])?'✓ Đã có trong SRS':'＋ Thêm SRS'}</button></div></article></div>`).join(''):'<div class="col-12"><div class="wrong-empty">Không tìm thấy nội dung phù hợp.</div></div>';
+  document.querySelectorAll('#ltCards .add').forEach(b=>b.onclick=()=>add(+b.dataset.i));
+}
+function ltRenderWrong(){
+  const ids=new Set(ltWrongIds()),list=LTQ.filter(x=>ids.has(x.id));
+  $('ltWrongList').innerHTML=list.length?list.slice(0,100).map(x=>`<div class="col-md-6 col-xl-4"><div class="wrong-item h-100"><span class="tag">${x.grade||''} · ${x.tag||'TEST'}</span><h5 class="mt-2">${x.formula||''}</h5><p><b>${x.prompt}</b></p><p class="text-secondary mb-0">${x.explain||''}</p></div></div>`).join(''):'<div class="col-12"><div class="wrong-empty"><div class="big">🎉</div><h4>Kho câu sai đang trống</h4><p class="text-secondary mb-0">Làm test để hệ thống tự gom những câu bạn chưa thuộc.</p></div></div>';
+}
+function ltPick(mode){
+  const wrong=new Set(ltWrongIds());
+  let pool=mode==='wrong'?LTQ.filter(x=>wrong.has(x.id)):[...K11Q];
+  if(!pool.length)pool=[...K11Q];
+  pool=pool.sort(()=>Math.random()-.5);
+  if(mode==='smart'){
+    const bad=K11Q.filter(x=>wrong.has(x.id)).sort(()=>Math.random()-.5);
+    const fresh=K11Q.filter(x=>!wrong.has(x.id)).sort(()=>Math.random()-.5);
+    const chosen=[...bad.slice(0,8),...fresh];
+    pool=chosen.sort(()=>Math.random()-.5).slice(0,20);
+  } else pool=pool.slice(0,20);
+  return pool;
+}
+function ltStart(mode='smart'){
+  ltQuiz=ltPick(mode);ltIndex=0;ltAnswers={};ltFlags=new Set();ltSubmitted=false;
+  $('ltStart').classList.add('d-none');$('ltResult').classList.add('d-none');$('ltExam').classList.remove('d-none');ltRenderQuestion();ltMode('test');
+}
+function ltRenderQuestion(){
+  if(!ltQuiz.length)return;
+  const x=ltQuiz[ltIndex],chosen=ltAnswers[x.id];
+  $('ltProgressText').textContent=`${ltIndex+1}/${ltQuiz.length}`;$('ltProgress').style.width=`${((ltIndex+1)/ltQuiz.length)*100}%`;
+  $('ltFlagState').textContent=ltFlags.has(ltIndex)?'⚑ Đã đánh dấu':'';
+  $('ltFlag').classList.toggle('btn-warning',ltFlags.has(ltIndex));$('ltFlag').classList.toggle('btn-outline-warning',!ltFlags.has(ltIndex));
+  $('ltPrev').disabled=ltIndex===0;$('ltNext').textContent=ltIndex===ltQuiz.length-1?'Nộp bài':'Câu tiếp theo →';
+  $('ltQuestion').innerHTML=`<div class="lt-qmeta"><span class="tag">${x.grade||''} · ${x.tag||'HÓA HỌC'}</span><span class="lt-qnum">${x.topic||''}</span></div><div class="lt-qprompt">${x.prompt||''}</div><div class="lt-qformula">${x.formula||''}</div><div class="lt-qtext">Chọn nhận định đúng nhất:</div>`;
+  $('ltOptions').innerHTML=x.options.map((o,i)=>`<div class="col-md-6"><button class="lt-option ${chosen===i?'selected':''}" data-i="${i}"><span class="option-letter">${String.fromCharCode(65+i)}</span><span>${o}</span></button></div>`).join('');
+  document.querySelectorAll('#ltOptions .lt-option').forEach(b=>b.onclick=()=>{ltAnswers[x.id]=+b.dataset.i;ltRenderQuestion()});
+}
+function ltSubmitExam(){
+  if(ltSubmitted||!ltQuiz.length)return;
+  const unanswered=ltQuiz.filter(x=>ltAnswers[x.id]===undefined).length;
+  if(unanswered>0 && !confirm(`Bạn còn ${unanswered} câu chưa chọn. Vẫn nộp bài?`))return;
+  ltSubmitted=true;let scoreNow=0,bad=[],wrongSet=new Set(ltWrongIds());
+  ltQuiz.forEach(x=>{const ok=ltAnswers[x.id]===x.answer;if(ok){scoreNow++;wrongSet.delete(x.id)}else bad.push(x.id)});
+  bad.forEach(id=>wrongSet.add(id));ltSaveWrong([...wrongSet]);markActivity();refreshStreak();
+  $('ltExam').classList.add('d-none');$('ltResult').classList.remove('d-none');$('ltResultScore').textContent=`${scoreNow}/${ltQuiz.length}`;
+  const pct=Math.round(scoreNow/ltQuiz.length*100);$('ltResultTitle').textContent=pct===100?'🔥 Hoàn hảo — bạn đã thuộc!':pct>=80?'💪 Rất tốt — củng cố thêm một vòng!':'🧠 Chưa thuộc hết — luyện lại câu sai!';
+  $('ltResultDetail').textContent=bad.length?`${bad.length} câu sai đã được đưa vào Kho câu sai. Hãy làm lại đến khi kho này trống.`:'Tất cả câu đều đúng. Các câu vừa làm đã được gỡ khỏi Kho câu sai.';
+  $('ltAgain').focus();ltRenderWrong();ltRefreshWrongCount();
+}
+ltInit();
