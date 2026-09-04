@@ -1,12 +1,13 @@
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";import{getAuth,GoogleAuthProvider,signInWithPopup,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";import{getFirestore,collection,addDoc,doc,updateDoc,onSnapshot,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";import{firebaseConfig}from"./firebase-config.js";import{Q}from"./quiz-bank.js";import{K11}from"./chem11-foundation.js";
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";import{getAuth,GoogleAuthProvider,signInWithPopup,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";import{getFirestore,collection,addDoc,doc,updateDoc,onSnapshot,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";import{firebaseConfig}from"./firebase-config.js";import{Q}from"./quiz-bank.js";import{K11}from"./chem11-foundation.js";import{K9PDF,R9PDF,F9PDF}from"./chem9-pdf.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),provider=new GoogleAuthProvider(),$=x=>document.getElementById(x),days=[0,1,3,7,14];let user,cards=[],unsub,queue=[],cur,quiz=[],qi=0,score=0,answered=false;
 const KBASE=[['pH','Dung dịch','pH = −log[H⁺]. pH<7 axit, =7 trung tính, >7 bazơ.','[H⁺] tăng → pH giảm.','Đừng nhầm pH với nồng độ của toàn bộ chất.'],['Chất điện li','Nền tảng','Chất khi tan trong nước tạo ion và dung dịch dẫn điện.','Axit, bazơ và đa số muối là chất điện li.','Điện li mạnh phân li gần như hoàn toàn.'],['Oxi hóa – khử','Đại cương','Oxi hóa là nhường electron; khử là nhận electron.','Số oxi hóa tăng → bị oxi hóa.','Chất khử nhường e; chất oxi hóa nhận e.'],['Al(OH)₃','Vô cơ','Al(OH)₃ là chất lưỡng tính, phản ứng với axit và bazơ mạnh.','Nhớ: lưỡng tính.','Với bazơ tạo aluminat trong điều kiện thích hợp.'],['NaHCO₃','Vô cơ','Natri hiđrocacbonat là muối axit; gặp axit giải phóng CO₂.','NaHCO₃ + HCl → CO₂.','Trong bài trộn, xét lượng H⁺ trước.'],['NH₄Cl','Vô cơ','NH₄Cl là muối chứa NH₄⁺; dung dịch thường có môi trường axit.','NH₄⁺ thủy phân tạo H₃O⁺.','NH₄⁺ là axit liên hợp của NH₃.'],['Este','Hữu cơ','Este có dạng RCOOR\'; thường tạo từ axit cacboxylic và ancol.','Thủy phân bazơ → muối + ancol.','Xà phòng hóa là thủy phân este trong môi trường bazơ.'],['Amin','Hữu cơ','Amin là dẫn xuất của NH₃ khi thay H bằng gốc hydrocarbon.','Amin có tính bazơ do cặp e tự do trên N.','Anilin là amin thơm, bazơ yếu hơn amin no.'],['Amino acid','Hữu cơ','Amino acid chứa đồng thời –NH₂ và –COOH.','Có tính lưỡng tính.','Peptide hình thành qua liên kết peptide.'],['CO₃²⁻','Vô cơ','Carbonate gặp H⁺ có thể giải phóng CO₂.','CO₃²⁻ + 2H⁺ → CO₂ + H₂O.','Rất hay gặp trong bài tính lượng axit.']];
-const K=[...KBASE,...K11];
+const K=[...K9PDF,...KBASE,...K11];
+const K9Q=K9PDF.map((x,i)=>({id:`k9pdf-${i+1}`,grade:'9',tag:'NỀN TẢNG HÓA 9 · PDF',topic:x[1],prompt:`Nhận định nào đúng nhất về “${x[0]}”?`,formula:x[2],options:[x[2],K9PDF[(i+5)%K9PDF.length][2],K9PDF[(i+11)%K9PDF.length][2],K9PDF[(i+17)%K9PDF.length][2]],answer:0,explain:`${x[3]} ${x[4]}`}));
 const K11Q=K11.map((x,i)=>({id:`k11-${i+1}`,grade:'11',tag:'NỀN TẢNG HÓA 11',topic:x[1],prompt:`Nhận định nào đúng nhất về “${x[0]}”?`,formula:'',options:[x[2],K11[(i+7)%K11.length][2],K11[(i+19)%K11.length][2],K11[(i+31)%K11.length][2]],answer:0,explain:`${x[3]} ${x[4]}`}));
-const LTQ=[...K11Q,...Q];
+const LTQ=[...K9Q,...K11Q,...Q];
 
-const R=[['NaHCO₃ + HCl','NaHCO₃ + HCl → NaCl + CO₂↑ + H₂O','Muối bicarbonate gặp axit giải phóng CO₂.'],['CO₃²⁻ + H⁺','CO₃²⁻ + 2H⁺ → CO₂↑ + H₂O','Phương trình ion rút gọn quan trọng.'],['NH₄⁺ + OH⁻','NH₄⁺ + OH⁻ → NH₃↑ + H₂O','Phản ứng đặc trưng dùng nhận biết NH₄⁺.'],['Al(OH)₃ + HCl','Al(OH)₃ + 3HCl → AlCl₃ + 3H₂O','Al(OH)₃ phản ứng với axit.'],['Al(OH)₃ + NaOH','Al(OH)₃ + NaOH → Na[Al(OH)₄]','Ví dụ về tính lưỡng tính.'],['CH₃COOH + C₂H₅OH','CH₃COOH + C₂H₅OH ⇌ CH₃COOC₂H₅ + H₂O','Este hóa, xúc tác H₂SO₄ đặc, đun nóng.'],['Este + NaOH','RCOOR\' + NaOH → RCOONa + R\'OH','Xà phòng hóa este đơn chức.'],['Ag⁺ + Cl⁻','Ag⁺ + Cl⁻ → AgCl↓','AgCl là kết tủa trắng.']];
-const F=[['Mol','n = m / M','n: mol; m: g; M: g/mol.'],['Dung dịch','C = n / V','V tính bằng L; C đơn vị mol/L.'],['Phần trăm','C% = m chất tan / m dung dịch × 100%','Khối lượng phải cùng đơn vị.'],['pH','pH = −log[H⁺]','pH và [H⁺] biến thiên ngược chiều.'],['Hiệu suất','H% = thực tế / lý thuyết × 100%','Kiểm tra lượng thực tế và lý thuyết.'],['Khí','PV = nRT','Dùng khi cần xét điều kiện khí cụ thể.'],['Trung hòa','n(H⁺) = n(OH⁻)','Sau khi quy đổi đúng hệ số phản ứng.']];
+const R=[...R9PDF,...[ ['NaHCO₃ + HCl','NaHCO₃ + HCl → NaCl + CO₂↑ + H₂O','Muối bicarbonate gặp axit giải phóng CO₂.'],['CO₃²⁻ + H⁺','CO₃²⁻ + 2H⁺ → CO₂↑ + H₂O','Phương trình ion rút gọn quan trọng.'],['NH₄⁺ + OH⁻','NH₄⁺ + OH⁻ → NH₃↑ + H₂O','Phản ứng đặc trưng dùng nhận biết NH₄⁺.'],['Al(OH)₃ + HCl','Al(OH)₃ + 3HCl → AlCl₃ + 3H₂O','Al(OH)₃ phản ứng với axit.'],['Al(OH)₃ + NaOH','Al(OH)₃ + NaOH → Na[Al(OH)₄]','Ví dụ về tính lưỡng tính.'],['CH₃COOH + C₂H₅OH','CH₃COOH + C₂H₅OH ⇌ CH₃COOC₂H₅ + H₂O','Este hóa, xúc tác H₂SO₄ đặc, đun nóng.'],['Este + NaOH','RCOOR\' + NaOH → RCOONa + R\'OH','Xà phòng hóa este đơn chức.'],['Ag⁺ + Cl⁻','Ag⁺ + Cl⁻ → AgCl↓','AgCl là kết tủa trắng.'] ]];
+const F=[...F9PDF,...[['Mol','n = m / M','n: mol; m: g; M: g/mol.'],['Dung dịch','C = n / V','V tính bằng L; C đơn vị mol/L.'],['Phần trăm','C% = m chất tan / m dung dịch × 100%','Khối lượng phải cùng đơn vị.'],['pH','pH = −log[H⁺]','pH và [H⁺] biến thiên ngược chiều.'],['Hiệu suất','H% = thực tế / lý thuyết × 100%','Kiểm tra lượng thực tế và lý thuyết.'],['Khí','PV = nRT','Dùng khi cần xét điều kiện khí cụ thể.'],['Trung hòa','n(H⁺) = n(OH⁻)','Sau khi quy đổi đúng hệ số phản ứng.']] ];
 function page(id){document.querySelectorAll('.page').forEach(x=>x.classList.add('d-none'));$(id)?.classList.remove('d-none');document.querySelectorAll('.nav-link').forEach(x=>x.classList.toggle('active',x.dataset.page===id));if(id==='home')dashboard();if(id==='study')studyBuild()};document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>page(b.dataset.page));
 $('login').onclick=async()=>{try{await signInWithPopup(auth,provider)}catch(e){ $('authErr').textContent=e.message;$('authErr').classList.remove('d-none')}};$('logout').onclick=()=>signOut(auth);
 onAuthStateChanged(auth,u=>{user=u;if(u){$('auth').classList.add('d-none');$('app').classList.remove('d-none');$('user').textContent=u.displayName||u.email||'';listen()}else{$('auth').classList.remove('d-none');$('app').classList.add('d-none');if(unsub)unsub()}});
@@ -118,7 +119,7 @@ function ltWrongIds(){return readJSON(storageKey(LT_WRONG_KEY),[])}
 function ltSaveWrong(ids){writeJSON(storageKey(LT_WRONG_KEY),[...new Set(ids)].slice(0,2000));ltRefreshWrongCount()}
 function ltRefreshWrongCount(){const n=ltWrongIds().length;['ltWrongCount','ltRetryStart'].forEach(id=>{if($(id))$(id).textContent=n});}
 function ltInit(){
-  const topics=[...new Set(K11.map(x=>x[1]))];
+  const topics=[...new Set(K.map(x=>x[1]))];
   $('ltTopic').innerHTML='<option value="all">Tất cả chủ đề</option>'+topics.map(t=>`<option value="${t}">${t}</option>`).join('');
   $('ltTopic').onchange=ltRenderRead;$('ltSearch').oninput=ltRenderRead;
   document.querySelectorAll('[data-lt-mode]').forEach(b=>b.onclick=()=>ltMode(b.dataset.ltMode));
@@ -147,12 +148,12 @@ function ltRenderWrong(){
 }
 function ltPick(mode){
   const wrong=new Set(ltWrongIds());
-  let pool=mode==='wrong'?LTQ.filter(x=>wrong.has(x.id)):[...K11Q];
-  if(!pool.length)pool=[...K11Q];
+  let pool=mode==='wrong'?LTQ.filter(x=>wrong.has(x.id)):[...K9Q,...K11Q];
+  if(!pool.length)pool=[...K9Q,...K11Q];
   pool=pool.sort(()=>Math.random()-.5);
   if(mode==='smart'){
-    const bad=K11Q.filter(x=>wrong.has(x.id)).sort(()=>Math.random()-.5);
-    const fresh=K11Q.filter(x=>!wrong.has(x.id)).sort(()=>Math.random()-.5);
+    const bad=[...K9Q,...K11Q].filter(x=>wrong.has(x.id)).sort(()=>Math.random()-.5);
+    const fresh=[...K9Q,...K11Q].filter(x=>!wrong.has(x.id)).sort(()=>Math.random()-.5);
     const chosen=[...bad.slice(0,8),...fresh];
     pool=chosen.sort(()=>Math.random()-.5).slice(0,20);
   } else pool=pool.slice(0,20);

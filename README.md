@@ -29,3 +29,8 @@ service cloud.firestore {
     }
   }
 }
+
+
+## Nội dung nền tảng Hóa 9 từ PDF
+- `chem9-pdf.js`: kiến thức, công thức và phản ứng được đưa vào Knowledge / Reactions / Formulas / Học & Test.
+- Nội dung bám theo `kien_thuc_hoa_9 (1).pdf` và được ưu tiên trước Hóa 11 để hỗ trợ người mất gốc.
